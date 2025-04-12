@@ -34,7 +34,7 @@ class FeatureExtraction:
 
         try:
             self.response = requests.get(url)
-            self.soup = BeautifulSoup(response.text, 'html.parser')
+            self.soup = BeautifulSoup(self.response.text, 'html.parser')
         except:
             pass
 
@@ -60,7 +60,29 @@ class FeatureExtraction:
         self.features.append(self.is_domain_registration_short())
         self.features.append(self.has_external_favicon())
 
-    # 1. IP 주소 사용 여부 확인 (도메인 대신 IP면 피싱 의심)
+        self.features.append(self.uses_non_standard_port())
+        self.features.append(self.has_https_in_domain())
+        self.features.append(self.check_external_resource_ratio())
+        self.features.append(self.check_anchor_tag_safety())
+        self.features.append(self.check_script_link_ratio())
+        self.features.append(self.check_form_handler())
+        self.features.append(self.has_email_submission())
+        self.features.append(self.is_url_structure_abnormal())
+        self.features.append(self.check_website_forwarding())
+        self.features.append(self.has_status_bar_script())
+
+        self.features.append(self.has_disabled_right_click())
+        self.features.append(self.uses_popup_window())
+        self.features.append(self.has_iframe_redirection())
+        self.features.append(self.is_domain_old_enough())
+        self.features.append(self.has_dns_record())
+        self.features.append(self.has_high_traffic_rank())
+        self.features.append(self.check_page_rank())
+        self.features.append(self.is_google_indexed())
+        self.features.append(self.check_links_pointing_to_page())
+        self.features.append(self.check_blacklist_status())
+        
+    # 1. IP 주소 사용 여부 확인
     def uses_ip_address(self):
         try:
             ipaddress.ip_address(self.url)
@@ -68,7 +90,7 @@ class FeatureExtraction:
         except:
             return 1
 
-    # 2. URL 길이가 너무 긴 경우 (짧으면 정상, 너무 길면 피싱 의심)
+    # 2. URL 길이가 너무 긴 경우
     def is_url_too_long(self):
         if len(self.url) < 54:
             return 1
@@ -76,7 +98,7 @@ class FeatureExtraction:
             return 0
         return -1
 
-    # 3. 단축 URL 서비스 사용 여부 (bit.ly, tinyurl 등 → 피싱 가능성↑)
+    # 3. 단축 URL 서비스 사용 여부
     def uses_shortening_service(self):
         match = re.search('bit\.ly|goo\.gl|shorte\.st|go2l\.ink|x\.co|ow\.ly|t\.co|tinyurl|tr\.im|is\.gd|cli\.gs|'
                           'yfrog\.com|migre\.me|ff\.im|tiny\.cc|url4\.eu|twit\.ac|su\.pr|twurl\.nl|snipurl\.com|'
@@ -90,7 +112,7 @@ class FeatureExtraction:
             return -1
         return 1
 
-    # 4. @ 기호 포함 여부 (@ 이후 주소를 가려서 피싱 시도 가능)
+    # 4. @ 기호 포함 여부
     def has_at_symbol(self):
         if re.findall("@", self.url):
             return -1
@@ -102,7 +124,7 @@ class FeatureExtraction:
             return -1
         return 1
 
-    # 6. 도메인에 하이픈(-)이 포함된 경우 (피싱 도메인 특징 중 하나)
+    # 6. 도메인에 하이픈(-)이 포함된 경우
     def has_prefix_suffix_in_domain(self):
         try:
             match = re.findall('-', self.domain)
@@ -112,7 +134,7 @@ class FeatureExtraction:
         except:
             return -1
 
-    # 7. 서브도메인의 개수가 많은 경우 (피싱 사이트에서 자주 보임)
+    # 7. 서브도메인의 개수가 많은 경우
     def has_many_subdomains(self):
         dot_count = len(re.findall("\.", self.url))
         if dot_count == 1:
@@ -121,7 +143,7 @@ class FeatureExtraction:
             return 0
         return -1
 
-    # 8. HTTPS 사용 여부 (보안 접속이면 정상 가능성↑)
+    # 8. HTTPS 사용 여부
     def uses_https(self):
         try:
             https = self.urlparse.scheme
@@ -131,7 +153,7 @@ class FeatureExtraction:
         except:
             return 1
 
-    # 9. 도메인 등록 기간이 짧은 경우 (신뢰도 낮음)
+    # 9. 도메인 등록 기간이 짧은 경우
     def is_domain_registration_short(self):
         try:
             expiration_date = self.whois_response.expiration_date
@@ -165,3 +187,279 @@ class FeatureExtraction:
             return -1
         except:
             return -1
+        
+    # 11. 비표준 포트 사용 여부 
+    def uses_non_standard_port(self):
+        try:
+            port = self.domain.split(":")
+            if len(port) > 1:
+                return -1
+            return 1
+        except:
+            return -1
+
+    # 12. 도메인명에 'https' 문자열 포함 여부 
+    def has_https_in_domain(self):
+        try:
+            if 'https' in self.domain:
+                return -1
+            return 1
+        except:
+            return -1
+
+    # 13. 외부 객체 요청 URL 비율 
+    def check_external_resource_ratio(self):
+        try:
+            success = 0
+            i = 0
+            for tag in ['img', 'audio', 'embed', 'iframe']:
+                for res in self.soup.find_all(tag, src=True):
+                    dots = [x.start(0) for x in re.finditer('\.', res['src'])]
+                    if self.url in res['src'] or self.domain in res['src'] or len(dots) == 1:
+                        success += 1
+                    i += 1
+
+            try:
+                percentage = success / float(i) * 100
+                if percentage < 22.0:
+                    return 1
+                elif 22.0 <= percentage < 61.0:
+                    return 0
+                else:
+                    return -1
+            except:
+                return 0
+        except:
+            return -1
+
+    # 14. <a> 태그 링크의 안전성 판단
+    def check_anchor_tag_safety(self):
+        try:
+            i, unsafe = 0, 0
+            for a in self.soup.find_all('a', href=True):
+                if "#" in a['href'] or "javascript" in a['href'].lower() or "mailto" in a['href'].lower() or not (self.url in a['href'] or self.domain in a['href']):
+                    unsafe += 1
+                i += 1
+
+            try:
+                percentage = unsafe / float(i) * 100
+                if percentage < 31.0:
+                    return 1
+                elif 31.0 <= percentage < 67.0:
+                    return 0
+                else:
+                    return -1
+            except:
+                return -1
+        except:
+            return -1
+
+    # 15. <script>, <link> 태그 내 외부 리소스 비율
+    def check_script_link_ratio(self):
+        try:
+            i, success = 0, 0
+
+            for tag in ['link', 'script']:
+                attr = 'href' if tag == 'link' else 'src'
+                for res in self.soup.find_all(tag, **{attr: True}):
+                    dots = [x.start(0) for x in re.finditer('\.', res[attr])]
+                    if self.url in res[attr] or self.domain in res[attr] or len(dots) == 1:
+                        success += 1
+                    i += 1
+
+            try:
+                percentage = success / float(i) * 100
+                if percentage < 17.0:
+                    return 1
+                elif 17.0 <= percentage < 81.0:
+                    return 0
+                else:
+                    return -1
+            except:
+                return 0
+        except:
+            return -1
+
+    # 16. <form> 태그의 action 속성 분석
+    def check_form_handler(self):
+        try:
+            forms = self.soup.find_all('form', action=True)
+            if len(forms) == 0:
+                return 1
+            for form in forms:
+                action = form['action']
+                if action == "" or action == "about:blank":
+                    return -1
+                elif self.url not in action and self.domain not in action:
+                    return 0
+                else:
+                    return 1
+        except:
+            return -1
+
+    # 17. 페이지 내 이메일 주소 수집 시도
+    def has_email_submission(self):
+        try:
+            if re.findall(r"[mail\(\)|mailto:?]", self.soup.text):
+                return -1
+            return 1
+        except:
+            return -1
+
+    # 18. WHOIS 정보와 HTML 응답이 동일한지 
+    def is_url_structure_abnormal(self):
+        try:
+            if self.response.text == self.whois_response:
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 19. 리디렉션 횟수 기반 의심 판단
+    def check_website_forwarding(self):
+        try:
+            history_len = len(self.response.history)
+            if history_len <= 1:
+                return 1
+            elif history_len <= 4:
+                return 0
+            else:
+                return -1
+        except:
+            return -1
+
+    # 20. 마우스 오버로 상태 표시줄을 조작하는 스크립트 존재 여부
+    def has_status_bar_script(self):
+        try:
+            if re.findall("<script>.+onmouseover.+</script>", self.response.text):
+                return 1
+            return -1
+        except:
+            return -1
+        
+          # 21. 오른쪽 클릭 금지 스크립트 존재 여부
+    def has_disabled_right_click(self):
+        try:
+            if re.findall(r"event.button ?== ?2", self.response.text):
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 22. 팝업(alert) 창 사용 여부
+    def uses_popup_window(self):
+        try:
+            if re.findall(r"alert\(", self.response.text):
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 23. iframe 또는 frameBorder 태그 존재 여부
+    def has_iframe_redirection(self):
+        try:
+            if re.findall(r"[<iframe>|<frameBorder>]", self.response.text):
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 24. 도메인 나이가 6개월 이상인지 확인
+    def is_domain_old_enough(self):
+        try:
+            creation_date = self.whois_response.creation_date
+            if isinstance(creation_date, list):
+                creation_date = creation_date[0]
+
+            today = date.today()
+            age = (today.year - creation_date.year) * 12 + (today.month - creation_date.month)
+            if age >= 6:
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 25. DNS 레코드 기록 존재 여부
+    def has_dns_record(self):
+        try:
+            creation_date = self.whois_response.creation_date
+            if isinstance(creation_date, list):
+                creation_date = creation_date[0]
+
+            today = date.today()
+            age = (today.year - creation_date.year) * 12 + (today.month - creation_date.month)
+            if age >= 6:
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 26. Alexa 웹사이트 트래픽 순위 확인
+    def has_high_traffic_rank(self):
+        try:
+            rank = BeautifulSoup(
+                urllib.request.urlopen("http://data.alexa.com/data?cli=10&dat=s&url=" + self.url).read(),
+                "xml"
+            ).find("REACH")['RANK']
+            if int(rank) < 100000:
+                return 1
+            return 0
+        except:
+            return -1
+
+    # 27. PageRank 순위가 낮은지 확인
+    def check_page_rank(self):
+        try:
+            prank_checker_response = requests.post(
+                "https://www.checkpagerank.net/index.php", {"name": self.domain}
+            )
+            global_rank = int(re.findall(r"Global Rank: ([0-9]+)", prank_checker_response.text)[0])
+            if 0 < global_rank < 100000:
+                return 1
+            return -1
+        except:
+            return -1
+
+    # 28. 구글 검색 결과에 인덱싱 되어 있는지 확인
+    def is_google_indexed(self):
+        try:
+            site = search(self.url, 5)
+            if site:
+                return 1
+            return -1
+        except:
+            return 1  # 검색 에러 발생 시 일단 정상 처리
+
+    # 29. 페이지 내 링크 개수 확인
+    def check_links_pointing_to_page(self):
+        try:
+            number_of_links = len(re.findall(r"<a href=", self.response.text))
+            if number_of_links == 0:
+                return 1
+            elif number_of_links <= 2:
+                return 0
+            else:
+                return -1
+        except:
+            return -1
+
+    # 30. 블랙리스트 URL/IP 존재 여부
+    def check_blacklist_status(self):
+        try:
+            url_match = re.search(
+                r'at\.ua|usa\.cc|baltazarpresentes\.com\.br|pe\.hu|esy\.es|hol\.es|sweddy\.com|myjino\.ru|96\.lt|ow\.ly',
+                self.url
+            )
+            ip_address = socket.gethostbyname(self.domain)
+            ip_match = re.search(
+                r'146\.112\.61\.108|213\.174\.157\.151|121\.50\.168\.88|192\.185\.217\.116|... (생략)',
+                ip_address
+            )
+            if url_match or ip_match:
+                return -1
+            return 1
+        except:
+            return 1
+        
+    def getFeaturesList(self):
+            return self.features
