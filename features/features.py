@@ -33,7 +33,7 @@ class FeatureExtraction:
         self.soup = ""
 
         try:
-            self.response = requests.get(url)
+            self.response = requests.get(url, timeout=5)
             self.soup = BeautifulSoup(self.response.text, 'html.parser')
         except:
             pass
@@ -47,7 +47,7 @@ class FeatureExtraction:
         try:
             self.whois_response = whois.whois(self.domain)
         except:
-            pass
+            self.whois_response = None  # 에러 발생 시 None으로 설정
 
         self.features.append(self.uses_ip_address())
         self.features.append(self.is_url_too_long())
@@ -81,7 +81,7 @@ class FeatureExtraction:
         self.features.append(self.is_google_indexed())
         self.features.append(self.check_links_pointing_to_page())
         self.features.append(self.check_blacklist_status())
-        
+
     # 1. IP 주소 사용 여부 확인
     def uses_ip_address(self):
         try:
@@ -153,21 +153,18 @@ class FeatureExtraction:
         except:
             return 1
 
-    # 9. 도메인 등록 기간이 짧은 경우
+   # 9. 도메인 등록 기간이 짧은 경우
     def is_domain_registration_short(self):
         try:
+            if not self.whois_response:
+                return -1
             expiration_date = self.whois_response.expiration_date
             creation_date = self.whois_response.creation_date
-            try:
-                if len(expiration_date):
-                    expiration_date = expiration_date[0]
-            except:
-                pass
-            try:
-                if len(creation_date):
-                    creation_date = creation_date[0]
-            except:
-                pass
+
+            if isinstance(expiration_date, list):
+                expiration_date = expiration_date[0]
+            if isinstance(creation_date, list):
+                creation_date = creation_date[0]
 
             age = (expiration_date.year - creation_date.year) * 12 + (expiration_date.month - creation_date.month)
             if age >= 12:
@@ -175,7 +172,7 @@ class FeatureExtraction:
             return -1
         except:
             return -1
-
+        
     # 10. 파비콘(favicon)이 외부 도메인에서 로드되는지 여부
     def has_external_favicon(self):
         try:
@@ -306,9 +303,11 @@ class FeatureExtraction:
         except:
             return -1
 
-    # 18. WHOIS 정보와 HTML 응답이 동일한지 
+    # 18. WHOIS 정보와 HTML 응답이 동일한지
     def is_url_structure_abnormal(self):
         try:
+            if not self.whois_response or not self.response:
+                return -1
             if self.response.text == self.whois_response:
                 return 1
             return -1
@@ -367,6 +366,8 @@ class FeatureExtraction:
     # 24. 도메인 나이가 6개월 이상인지 확인
     def is_domain_old_enough(self):
         try:
+            if not self.whois_response:
+                return -1
             creation_date = self.whois_response.creation_date
             if isinstance(creation_date, list):
                 creation_date = creation_date[0]
@@ -382,6 +383,8 @@ class FeatureExtraction:
     # 25. DNS 레코드 기록 존재 여부
     def has_dns_record(self):
         try:
+            if not self.whois_response:
+                return -1
             creation_date = self.whois_response.creation_date
             if isinstance(creation_date, list):
                 creation_date = creation_date[0]
@@ -410,8 +413,12 @@ class FeatureExtraction:
     # 27. PageRank 순위가 낮은지 확인
     def check_page_rank(self):
         try:
+            if not self.domain:
+                return -1
             prank_checker_response = requests.post(
-                "https://www.checkpagerank.net/index.php", {"name": self.domain}
+                "https://www.checkpagerank.net/index.php",
+                {"name": self.domain},
+                timeout=5
             )
             global_rank = int(re.findall(r"Global Rank: ([0-9]+)", prank_checker_response.text)[0])
             if 0 < global_rank < 100000:
@@ -443,23 +450,43 @@ class FeatureExtraction:
         except:
             return -1
 
-    # 30. 블랙리스트 URL/IP 존재 여부
+    # 30. URL 또는 IP가 블랙리스트에 포함되는지 확인
     def check_blacklist_status(self):
         try:
-            url_match = re.search(
-                r'at\.ua|usa\.cc|baltazarpresentes\.com\.br|pe\.hu|esy\.es|hol\.es|sweddy\.com|myjino\.ru|96\.lt|ow\.ly',
-                self.url
+            # 1. 블랙리스트 URL 패턴 (도메인 내 포함 여부)
+            url_blacklist_pattern = (
+                r"at\.ua|usa\.cc|baltazarpresentes\.com\.br|pe\.hu|esy\.es|hol\.es|"
+                r"sweddy\.com|myjino\.ru|96\.lt|ow\.ly"
             )
-            ip_address = socket.gethostbyname(self.domain)
-            ip_match = re.search(
-                r'146\.112\.61\.108|213\.174\.157\.151|121\.50\.168\.88|192\.185\.217\.116|... (생략)',
-                ip_address
-            )
+            url_match = re.search(url_blacklist_pattern, self.url)
+
+            # 2. 블랙리스트 IP 패턴 (도메인 IP 변환 후 일치 확인)
+            try:
+                ip_address = socket.gethostbyname(self.domain)
+                ip_blacklist_pattern = (
+                    r"146\.112\.61\.108|213\.174\.157\.151|121\.50\.168\.88|192\.185\.217\.116|78\.46\.211\.158|"
+                    r"181\.174\.165\.13|46\.242\.145\.103|121\.50\.168\.40|83\.125\.22\.219|46\.242\.145\.98|"
+                    r"107\.151\.148\.44|107\.151\.148\.107|64\.70\.19\.203|199\.184\.144\.27|107\.151\.148\.108|"
+                    r"107\.151\.148\.109|119\.28\.52\.61|54\.83\.43\.69|52\.69\.166\.231|216\.58\.192\.225|"
+                    r"118\.184\.25\.86|67\.208\.74\.71|23\.253\.126\.58|104\.239\.157\.210|175\.126\.123\.219|"
+                    r"141\.8\.224\.221|10\.10\.10\.10|43\.229\.108\.32|103\.232\.215\.140|69\.172\.201\.153|"
+                    r"216\.218\.185\.162|54\.225\.104\.146|103\.243\.24\.98|199\.59\.243\.120|31\.170\.160\.61|"
+                    r"213\.19\.128\.77|62\.113\.226\.131|208\.100\.26\.234|195\.16\.127\.102|195\.16\.127\.157|"
+                    r"34\.196\.13\.28|103\.224\.212\.222|172\.217\.4\.225|54\.72\.9\.51|192\.64\.147\.141|"
+                    r"198\.200\.56\.183|23\.253\.164\.103|52\.48\.191\.26|52\.214\.197\.72|87\.98\.255\.18|"
+                    r"209\.99\.17\.27|216\.38\.62\.18|104\.130\.124\.96|47\.89\.58\.141|54\.86\.225\.156|"
+                    r"54\.82\.156\.19|37\.157\.192\.102|204\.11\.56\.48|110\.34\.231\.42"
+                )
+                ip_match = re.search(ip_blacklist_pattern, ip_address)
+            except:
+                ip_match = False  # IP 변환 실패 시 IP 블랙리스트 검사 생략
+
+            # 3. 둘 중 하나라도 매치되면 피싱으로 간주
             if url_match or ip_match:
                 return -1
             return 1
         except:
-            return 1
+            return 0  # 판단 불가한 경우는 중립값 반환
         
     def getFeaturesList(self):
             return self.features
