@@ -21,6 +21,12 @@ import pandas as pd                     # (현재 사용 X) 피처 결과 저장
 #drive.mount('/content/gdrive', force_remount=True)
 #filepath = '/content/gdrive/My Drive/' + '/csv/'
 
+# AbnormalURL -1
+# WebsiteTraffic -1
+# PageRank -1
+# GoogleIndex 1
+# 해당 피쳐 수정 필요
+
 class FeatureExtraction:
     features = []
     def __init__(self,url):
@@ -33,7 +39,7 @@ class FeatureExtraction:
         self.soup = ""
 
         try:
-            self.response = requests.get(url, timeout=5)
+            self.response = requests.get(url, timeout=3)
             self.soup = BeautifulSoup(self.response.text, 'html.parser')
         except:
             pass
@@ -416,7 +422,7 @@ class FeatureExtraction:
             prank_checker_response = requests.post(
                 "https://www.checkpagerank.net/index.php",
                 {"name": self.domain},
-                timeout=5
+                timeout=3
             )
             global_rank = int(re.findall(r"Global Rank: ([0-9]+)", prank_checker_response.text)[0])
             if 0 < global_rank < 100000:
