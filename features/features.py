@@ -20,3 +20,59 @@ import pandas as pd                     # (현재 사용 X) 피처 결과 저장
 # from google.colab import drive          # Colab에서 Google Drive 마운트
 # drive.mount('/content/gdrive', force_remount=True)
 # filepath = '/content/gdrive/My Drive/' + '/csv/'
+
+class FeatureExtraction:
+    features = []
+    def __init__(self,url):
+        self.features = []
+        self.url = url
+        self.domain = ""
+        self.whois_response = ""
+        self.urlparse = ""
+        self.response = ""
+        self.soup = ""
+
+        try:
+            self.response = requests.get(url)
+            self.soup = BeautifulSoup(response.text, 'html.parser')
+        except:
+            pass
+
+        try:
+            self.urlparse = urlparse(url)
+            self.domain = self.urlparse.netloc
+        except:
+            pass
+
+        try:
+            self.whois_response = whois.whois(self.domain)
+        except:
+            pass
+
+        self.features.append(self.UsingIp())
+        self.features.append(self.longUrl())
+        self.features.append(self.shortUrl())
+        self.features.append(self.symbol())
+        self.features.append(self.redirecting())
+        self.features.append(self.prefixSuffix())
+        self.features.append(self.SubDomains())
+        self.features.append(self.Hppts())
+        self.features.append(self.DomainRegLen())
+        self.features.append(self.Favicon())
+
+     # 1.UsingIp
+    def UsingIp(self):
+        try:
+            ipaddress.ip_address(self.url)
+            return -1
+        except:
+            return 1
+
+    # 2.longUrl
+    def longUrl(self):
+        if len(self.url) < 54:
+            return 1
+        if len(self.url) >= 54 and len(self.url) <= 75:
+            return 0
+        return -1
+
