@@ -17,9 +17,9 @@ from dateutil.parser import parse as date_parse # 문자열 → 날짜 객체
 from googlesearch import search         # Google 검색 결과 확인
 
 import pandas as pd                     # (현재 사용 X) 피처 결과 저장/로딩용
-# from google.colab import drive          # Colab에서 Google Drive 마운트
-# drive.mount('/content/gdrive', force_remount=True)
-# filepath = '/content/gdrive/My Drive/' + '/csv/'
+#from google.colab import drive          # Colab에서 Google Drive 마운트
+#drive.mount('/content/gdrive', force_remount=True)
+#filepath = '/content/gdrive/My Drive/' + '/csv/'
 
 class FeatureExtraction:
     features = []
@@ -44,10 +44,8 @@ class FeatureExtraction:
         except:
             pass
 
-        try:
-            self.whois_response = whois.whois(self.domain)
-        except:
-            self.whois_response = None  # 에러 발생 시 None으로 설정
+        # WHOIS는 현재 사용하지 않으므로 None 고정
+        self.whois_response = None
 
         self.features.append(self.uses_ip_address())
         self.features.append(self.is_url_too_long())
@@ -57,7 +55,7 @@ class FeatureExtraction:
         self.features.append(self.has_prefix_suffix_in_domain())
         self.features.append(self.has_many_subdomains())
         self.features.append(self.uses_https())
-        self.features.append(self.is_domain_registration_short())
+        #self.features.append(self.is_domain_registration_short())
         self.features.append(self.has_external_favicon())
 
         self.features.append(self.uses_non_standard_port())
@@ -74,8 +72,8 @@ class FeatureExtraction:
         self.features.append(self.has_disabled_right_click())
         self.features.append(self.uses_popup_window())
         self.features.append(self.has_iframe_redirection())
-        self.features.append(self.is_domain_old_enough())
-        self.features.append(self.has_dns_record())
+        #self.features.append(self.is_domain_old_enough())
+        #self.features.append(self.has_dns_record())
         self.features.append(self.has_high_traffic_rank())
         self.features.append(self.check_page_rank())
         self.features.append(self.is_google_indexed())
@@ -401,9 +399,9 @@ class FeatureExtraction:
     def has_high_traffic_rank(self):
         try:
             rank = BeautifulSoup(
-                urllib.request.urlopen("http://data.alexa.com/data?cli=10&dat=s&url=" + self.url).read(),
-                "xml"
-            ).find("REACH")['RANK']
+              urllib.request.urlopen("http://data.alexa.com/data?cli=10&dat=s&url=" + self.url).read(),
+              features="xml"  
+            ).find("REACH")["RANK"]
             if int(rank) < 100000:
                 return 1
             return 0
