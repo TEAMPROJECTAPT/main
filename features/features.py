@@ -26,6 +26,8 @@ import pandas as pd                     # (현재 사용 X) 피처 결과 저장
 # PageRank -1
 # GoogleIndex 1
 # 해당 피쳐 수정 필요
+# 현재 특징 추출에서 정적인 부분, 동적인 부분 총 30개의 특징을 추출하는데 수정 필요. 동적인 부분에서의 시간 소요가 너무 큼
+# url 당 요청 - 응답시 시간이 오래걸림. url 문자열에서 특징 추출해도 탐지율 높음.
 
 class FeatureExtraction:
     features = []
