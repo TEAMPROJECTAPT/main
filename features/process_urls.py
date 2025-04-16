@@ -1,4 +1,5 @@
 #로컬 환경에서 돌리기 위한 코드
+#수정 필요함 
 
 import pandas as pd
 from tqdm import tqdm

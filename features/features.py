@@ -26,6 +26,8 @@ import pandas as pd                     # (현재 사용 X) 피처 결과 저장
 # PageRank -1
 # GoogleIndex 1
 # 해당 피쳐 수정 필요
+# 현재 특징 추출에서 정적인 부분, 동적인 부분 총 30개의 특징을 추출하는데 수정 필요. 동적인 부분에서의 시간 소요가 너무 큼
+# url 당 요청 - 응답시 시간이 오래걸림. url 문자열에서 특징 추출해도 탐지율 높음.
 
 class FeatureExtraction:
     features = []
@@ -89,7 +91,8 @@ class FeatureExtraction:
     # 1. IP 주소 사용 여부 확인
     def uses_ip_address(self):
         try:
-            ipaddress.ip_address(self.url)
+            hostname = urlparse(self.url).hostname      #hostname==url(포트 삭제)
+            ipaddress.ip_address(hostname)
             return -1
         except:
             return 1
@@ -311,9 +314,11 @@ class FeatureExtraction:
     def is_url_structure_abnormal(self):
         try:
             if not self.whois_response or not self.response:
-                return -1
-            if self.response.text == self.whois_response:
-                return 1
+                return -1 # 정상
+            # WHOIS 정보에 HTML 구조가 포함되면 이상하다고 판단     
+            whois_lower = self.whois_response.lower()   #html 태그 대소문자 구분 없음==> lower()
+            if "<html" in whois_lower or "<!doctype html" in whois_lower:
+                return 1  # 비정상
             return -1
         except:
             return -1
@@ -401,20 +406,31 @@ class FeatureExtraction:
         except:
             return -1
 
-    # 26. Alexa 웹사이트 트래픽 순위 확인
+    # 26. SimilarWeb 웹사이트 트래픽 순위 확인      #Alexa 사이트 폐쇄
+    class TrafficChecker:
+        def __init__(self, url, api_key):
+            self.url = url
+            self.api_key = api_key
+
     def has_high_traffic_rank(self):
         try:
-            rank = BeautifulSoup(
-              urllib.request.urlopen("http://data.alexa.com/data?cli=10&dat=s&url=" + self.url).read(),
-              features="xml"  
-            ).find("REACH")["RANK"]
-            if int(rank) < 100000:
+            # SimilarWeb API를 사용하여 트래픽 정보 가져오기
+            api_url = f"https://api.similarweb.com/v1/website/{self.url}/traffic"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}"
+            }
+            response = requests.get(api_url, headers=headers)
+            data = response.json()
+
+            # 트래픽 순위 가져오기
+            rank = data.get("rank", None)
+            if rank and rank < 100000:
                 return 1
             return 0
         except:
             return -1
 
-    # 27. PageRank 순위가 낮은지 확인
+    # 27. PageRank 순위가 낮은지 확인   # html request.post 요청 5초가 안전, global_rank=100만으로 변경
     def check_page_rank(self):
         try:
             if not self.domain:
@@ -422,24 +438,25 @@ class FeatureExtraction:
             prank_checker_response = requests.post(
                 "https://www.checkpagerank.net/index.php",
                 {"name": self.domain},
-                timeout=3
+                timeout=5
             )
-            global_rank = int(re.findall(r"Global Rank: ([0-9]+)", prank_checker_response.text)[0])
-            if 0 < global_rank < 100000:
-                return 1
+            
+            match = re.findall(r"Global Rank: ([0-9]+)", prank_checker_response.text)
+            if match:
+                global_rank = int(match[0])
+                if 0 < global_rank < 1000000:
+                    return 1
             return -1
         except:
-            return -1
+            -1
 
     # 28. 구글 검색 결과에 인덱싱 되어 있는지 확인
     def is_google_indexed(self):
         try:
-            site = search(self.url, 5)
-            if site:
-                return 1
-            return -1
-        except:
-            return 1  # 검색 에러 발생 시 일단 정상 처리
+            results = list(search(self.url, num=5))
+            return 1 if results else -1
+        except Exception as e:
+            return 0  # 에러 발생 시 미정 처리
 
     # 29. 페이지 내 링크 개수 확인
     def check_links_pointing_to_page(self):

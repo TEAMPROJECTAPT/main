@@ -4,11 +4,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 
-# 상대경로로 main 폴더의 csv 로드
-DATA_PATH = os.path.join("..", "csv", "2021_dataset.csv")
-df = pd.read_csv(DATA_PATH)
-
 # 1. 데이터 로딩
+DATA_PATH = os.path.join("..", "csv", "2021_dataset.csv")
 df = pd.read_csv(DATA_PATH)
 
 # 2. X, y 분리 (마지막 열이 label이라고 가정)
