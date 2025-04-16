@@ -1,71 +1,50 @@
-#test
-
 import re
 import ipaddress
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-import socket
 import requests
 
 class FeatureExtraction:
-    def __init__(self, url, light_mode=True):
+    def __init__(self, url):
         self.url = url
-        self.domain = ""
         self.urlparse = urlparse(url)
         self.domain = self.urlparse.netloc
         self.features = []
 
-        self.response = None
-        self.soup = None
-        self.light_mode = light_mode
-
-        # 요청이 필요한 피처만 동적으로 수행
-        if not light_mode:
-            try:
-                self.response = requests.get(url, timeout=3)
-                self.soup = BeautifulSoup(self.response.text, 'html.parser')
-            except:
-                self.response = None
-                self.soup = None
+        try:
+            self.response = requests.get(url, timeout=3)
+            self.soup = BeautifulSoup(self.response.text, 'html.parser')
+        except:
+            self.response = None
+            self.soup = None
 
         self.features = self.extract_all_features()
 
     def extract_all_features(self):
         features = [
-            self.uses_ip_address(),
-            self.is_url_too_long(),
-            self.uses_shortening_service(),
-            self.has_at_symbol(),
-            self.has_double_slash_redirect(),
-            self.has_prefix_suffix_in_domain(),
-            self.has_many_subdomains(),
-            self.has_https_in_scheme(),
-            self.has_https_in_domain()
+            self.uses_ip_address(),               # 1
+            self.is_url_too_long(),               # 2
+            self.uses_shortening_service(),       # 3
+            self.has_at_symbol(),                 # 4
+            self.has_prefix_suffix_in_domain(),   # 5
+            self.has_many_subdomains(),           # 6
+            self.has_https_in_scheme(),           # 7
+            self.has_external_favicon(),          # 8
+            self.check_external_resource_ratio(), # 9
+            self.check_anchor_tag_safety(),       #10
+            self.check_script_link_ratio(),       #11
+            self.check_form_handler(),            #12
+            self.has_email_submission(),          #13
+            self.check_website_forwarding(),      #14
+            self.uses_popup_window(),             #15
+            self.has_iframe_redirection(),        #16
+            self.check_links_pointing_to_page()   #17
         ]
-
-        if not self.light_mode and self.response and self.soup:
-            features.extend([
-                self.has_external_favicon(),
-                self.uses_non_standard_port(),
-                self.check_external_resource_ratio(),
-                self.check_anchor_tag_safety(),
-                self.check_script_link_ratio(),
-                self.check_form_handler(),
-                self.has_email_submission(),
-                self.check_website_forwarding(),
-                self.uses_popup_window(),
-                self.has_iframe_redirection(),
-                self.check_links_pointing_to_page(),
-                #self.check_blacklist_status()
-            ])
-        else:
-            features.extend([0] * 13)
-
         return features
 
     def uses_ip_address(self):
         try:
-            ipaddress.ip_address(self.url)
+            ipaddress.ip_address(self.domain)
             return -1
         except:
             return 1
@@ -81,9 +60,6 @@ class FeatureExtraction:
     def has_at_symbol(self):
         return -1 if "@" in self.url else 1
 
-    def has_double_slash_redirect(self):
-        return -1 if self.url.rfind("//") > 6 else 1
-
     def has_prefix_suffix_in_domain(self):
         return -1 if "-" in self.domain else 1
 
@@ -93,12 +69,6 @@ class FeatureExtraction:
 
     def has_https_in_scheme(self):
         return 1 if self.urlparse.scheme == "https" else -1
-
-    def has_https_in_domain(self):
-        return -1 if "https" in self.domain else 1
-
-    def uses_non_standard_port(self):
-        return -1 if ":" in self.domain else 1
 
     def has_external_favicon(self):
         try:
