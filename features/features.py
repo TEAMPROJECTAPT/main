@@ -91,7 +91,8 @@ class FeatureExtraction:
     # 1. IP 주소 사용 여부 확인
     def uses_ip_address(self):
         try:
-            ipaddress.ip_address(self.url)
+            hostname = urlparse(self.url).hostname      #hostname==url(포트 삭제)
+            ipaddress.ip_address(hostname)
             return -1
         except:
             return 1
