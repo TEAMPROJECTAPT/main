@@ -38,7 +38,12 @@ class FeatureExtraction:
             self.check_website_forwarding(),      #14
             self.uses_popup_window(),             #15
             self.has_iframe_redirection(),        #16
-            self.check_links_pointing_to_page()   #17
+            self.check_links_pointing_to_page(),  #17
+            self.has_suspicious_words_in_url(),   #18
+            self.count_digits_in_url(),           #19
+            self.meta_refresh_exists(),           #20
+            self.has_password_input(),            #21
+            self.external_script_ratio()          #22
         ]
         return features
 
@@ -170,6 +175,40 @@ class FeatureExtraction:
         try:
             num_links = self.response.text.lower().count("<a href=")
             return 1 if num_links == 0 else 0 if num_links <= 2 else -1
+        except:
+            return -1
+
+    def has_suspicious_words_in_url(self):
+        suspicious_keywords = ['login', 'secure', 'verify', 'account', 'update', 'bank', 'free', 'password', 'win', 'confirm']
+        return -1 if any(word in self.url.lower() for word in suspicious_keywords) else 1
+
+    def count_digits_in_url(self):
+        digits = sum(c.isdigit() for c in self.url)
+        return -1 if digits > 10 else 1
+
+    def meta_refresh_exists(self):
+        try:
+            return -1 if self.soup.find("meta", {"http-equiv": "refresh"}) else 1
+        except:
+            return -1
+
+    def has_password_input(self):
+        try:
+            return -1 if self.soup.find("input", {"type": "password"}) else 1
+        except:
+            return -1
+
+    def external_script_ratio(self):
+        try:
+            total, local = 0, 0
+            for tag in self.soup.find_all("script", src=True):
+                total += 1
+                if self.domain in tag["src"]:
+                    local += 1
+            if total == 0:
+                return 0
+            ratio = local / total * 100
+            return 1 if ratio >= 80 else 0 if ratio >= 40 else -1
         except:
             return -1
 
