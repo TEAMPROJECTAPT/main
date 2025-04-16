@@ -59,7 +59,6 @@ class FeatureExtraction:
                 #self.check_blacklist_status()
             ])
         else:
-            # 동적 피처에 대해 디폴트 값 설정
             features.extend([0] * 13)
 
         return features
@@ -203,18 +202,6 @@ class FeatureExtraction:
             return 1 if num_links == 0 else 0 if num_links <= 2 else -1
         except:
             return -1
-
-    # def check_blacklist_status(self):
-    #     try:
-    #         blacklist_domains = ["at.ua", "usa.cc", "96.lt", "baltazarpresentes.com.br"]
-    #         for b in blacklist_domains:
-    #             if b in self.url:
-    #                 return -1
-    #         ip = socket.gethostbyname(self.domain)
-    #         blacklist_ips = ["146.112.61.108", "121.50.168.88", "192.185.217.116"]
-    #         return -1 if ip in blacklist_ips else 1
-    #     except:
-    #         return 0
 
     def getFeaturesList(self):
         return self.features
