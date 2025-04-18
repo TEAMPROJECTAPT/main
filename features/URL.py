@@ -14,7 +14,7 @@ def to_valid_url(domain):
     return None
 
 # 1. CSV 파일 불러오기
-df = pd.read_csv(filepath + "top1.csv", header=None)
+df = pd.read_csv("top1.csv", header=None)
 df.columns = ["Rank", "Domain"]
 
 # 2. 상위 N개만 테스트
