@@ -18,7 +18,7 @@ import logging
 logging.getLogger("whois").setLevel(logging.CRITICAL)
 socket.setdefaulttimeout(10)
 
-GOOGLE_API_KEY = "AIzaSyDbL5z9D-HtxempAwCRTi7qQZniBiaOB6c"
+GOOGLE_API_KEY = "Your API KEY"
 API_URL = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={GOOGLE_API_KEY}"
 
 # ──────────── 도메인 추출 ────────────
