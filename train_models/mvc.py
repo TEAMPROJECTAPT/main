@@ -19,6 +19,9 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.linear_model import SGDClassifier, PassiveAggressiveClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
@@ -62,22 +65,108 @@ y_train, y_test = y_train.astype(float), y_test.astype(float)
 
 # ────────────────── 모델 구성 함수 ──────────────────
 def get_model(name, params):
-    if name == "lr": return LogisticRegression(C=params["lr_C"], solver="liblinear", class_weight="balanced", max_iter=300)
-    if name == "xgb": return XGBClassifier(n_estimators=params["xgb_n"], max_depth=params["xgb_d"], learning_rate=params["xgb_lr"],
-                                           subsample=params["xgb_sub"], colsample_bytree=params["xgb_col"],
-                                           use_label_encoder=False, eval_metric="logloss", verbosity=0)
-    if name == "lgbm": return LGBMClassifier(n_estimators=params["lgbm_n"], max_depth=params["lgbm_d"], learning_rate=params["lgbm_lr"], verbose=-1)
-    if name == "cat": return CatBoostClassifier(iterations=params["cat_n"], depth=params["cat_d"], learning_rate=params["cat_lr"], verbose=0)
-    if name == "mlp": return MLPClassifier(hidden_layer_sizes=(params["mlp_l1"], params["mlp_l2"]), alpha=params["mlp_alpha"], max_iter=500)
-    if name == "svc": return SVC(C=params["svc_C"], probability=True, class_weight="balanced")
-    if name == "knn": return KNeighborsClassifier(n_neighbors=params["knn_k"])
-    if name == "et": return ExtraTreesClassifier(n_estimators=params["et_n"], max_depth=params["et_d"])
-    if name == "gb": return GradientBoostingClassifier(n_estimators=params["gb_n"], max_depth=params["gb_d"], learning_rate=params["gb_lr"])
-    if name == "hist": return HistGradientBoostingClassifier(max_iter=params["hist_iter"])
-    if name == "bag": return BaggingClassifier(n_estimators=params["bag_n"])
-    if name == "ridge": return RidgeClassifier(alpha=params["ridge_alpha"], class_weight="balanced")
-    if name == "dt": return DecisionTreeClassifier(max_depth=params["dt_d"], class_weight="balanced")
-    if name == "nb": return GaussianNB()
+    if name == "lr":
+        return LogisticRegression(
+            C=params["lr_C"], solver="liblinear", class_weight="balanced", max_iter=300
+        )
+    if name == "xgb":
+        return XGBClassifier(
+            n_estimators=params["xgb_n"],
+            max_depth=params["xgb_d"],
+            learning_rate=params["xgb_lr"],
+            subsample=params["xgb_sub"],
+            colsample_bytree=params["xgb_col"],
+            use_label_encoder=False, eval_metric="logloss",
+            verbosity=0
+        )
+    if name == "lgbm":
+        return LGBMClassifier(
+            n_estimators=params["lgbm_n"],
+            max_depth=params["lgbm_d"],
+            learning_rate=params["lgbm_lr"],
+            verbose=-1
+        )
+    if name == "cat":
+        return CatBoostClassifier(
+            iterations=params["cat_n"],
+            depth=params["cat_d"],
+            learning_rate=params["cat_lr"],
+            verbose=0
+        )
+    if name == "mlp":
+        return MLPClassifier(
+            hidden_layer_sizes=(params["mlp_l1"],params["mlp_l2"]),
+            alpha=params["mlp_alpha"],
+            max_iter=500
+        )
+    if name == "svc":
+        return SVC(
+            C=params["svc_C"],
+            probability=True,
+            class_weight="balanced"
+        )
+    if name == "knn":
+        return KNeighborsClassifier(
+            n_neighbors=params["knn_k"]
+        )
+    if name == "et":
+        return ExtraTreesClassifier(
+            n_estimators=params["et_n"],
+            max_depth=params["et_d"]
+        )
+    if name == "gb":
+        return GradientBoostingClassifier(
+            n_estimators=params["gb_n"],
+            max_depth=params["gb_d"],
+            learning_rate=params["gb_lr"]
+        )
+    if name == "hist":
+        return HistGradientBoostingClassifier(
+            max_iter=params["hist_iter"]
+        )
+    if name == "bag":
+        return BaggingClassifier(
+            n_estimators=params["bag_n"]
+        )
+    if name == "ridge":
+        return RidgeClassifier(
+            alpha=params["ridge_alpha"],
+            class_weight="balanced"
+        )
+    if name == "dt":
+        return DecisionTreeClassifier(
+            max_depth=params["dt_d"],
+            class_weight="balanced"
+        )
+    if name == "nb":
+        return GaussianNB()
+    if name == "rf":
+        return RandomForestClassifier(
+            n_estimators=params["rf_n"],
+            max_depth=params["rf_d"],
+            class_weight="balanced"
+        )
+    if name == "ada":
+        return AdaBoostClassifier(
+            n_estimators=params["ada_n"],
+            learning_rate=params["ada_lr"]
+        )
+    if name == "sgd":
+        return SGDClassifier(
+            alpha=params["sgd_alpha"],
+            max_iter=params["sgd_iter"],
+            class_weight="balanced"
+        )
+    if name == "pa":
+        return PassiveAggressiveClassifier(
+            C=params["pa_C"],
+            max_iter=params["pa_iter"],
+            class_weight="balanced"
+        )
+    if name == "lda":
+        return LinearDiscriminantAnalysis()
+    if name == "qda":
+        return QuadraticDiscriminantAnalysis()
 
 # ────────────────── 모델 조합 생성 ──────────────────
 model_keys = ["lr", "xgb", "lgbm", "cat", "mlp", "svc", "knn", "et", "gb", "hist", "bag", "ridge", "dt", "nb"]
