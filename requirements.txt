@@ -1,0 +1,30 @@
+# --- 서버 실행용 ---
+flask
+
+# --- 데이터 처리 ---
+pandas
+numpy
+joblib
+tqdm
+scikit-learn
+matplotlib
+seaborn
+
+# --- 최적화/튜닝 ---
+optuna
+
+# --- ML 모델들 ---
+xgboost
+lightgbm
+catboost
+
+# --- 웹 관련 (크롤링, 요청) ---
+requests
+beautifulsoup4
+whois
+
+# --- 웹 자동화 (선택적: Selenium 쓸 경우) ---
+selenium
+
+# --- 기타 (네트워크/IP 처리 등) ---
+ipython  # (편의용)
